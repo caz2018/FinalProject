@@ -1,0 +1,29 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1532207311449.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "C3038B1D",
+    "lastKnownWriteTime" : 4465299248,
+    "last_content_update" : 1532207311449,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "C005EE7",
+        "caption" : "weatherdates",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=weatherdates&cache_key=C005EE7",
+        "displayedObservations" : "1863",
+        "environment" : "",
+        "object" : "weatherdates",
+        "preview" : "0",
+        "totalObservations" : "1863",
+        "variables" : "1"
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}

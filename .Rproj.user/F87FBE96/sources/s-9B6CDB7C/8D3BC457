@@ -1,0 +1,29 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1532207205239.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "8D3BC457",
+    "lastKnownWriteTime" : 5795113945593282566,
+    "last_content_update" : 1532207205239,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "B80261BF",
+        "caption" : "WeatherData",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=WeatherData&cache_key=B80261BF",
+        "displayedObservations" : 1863,
+        "environment" : "",
+        "object" : "WeatherData",
+        "preview" : 0,
+        "totalObservations" : 1863,
+        "variables" : 7
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}
