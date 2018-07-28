@@ -25,7 +25,10 @@ test
 #fitting a STL decomposition to the sales data
 require(graphics)
 
-fit <- stl(test, s.window=12, robust=TRUE)
+fit <- stl(test, t.window=12, s.window='periodic', robust=TRUE) #s.window > results in a smoother trend
 plot(fit)
+
+fit2 <- stl(test, t.window=12, s.window=365, robust=TRUE) #s.window > results in a smoother trend
+plot(fit2)
 
 
