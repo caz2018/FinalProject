@@ -17,6 +17,11 @@ WeatherData$DATE <- weatherdates
 
 library(xts)
 DailySales <- xts(SalesData$Date, order.by = SalesData$Date)
+test <- ts(DailySales)
+summary(test)
 
-fit <- stl(SalesData, t.window=15, s.window="periodic", robust=TRUE)
+#fitting a STL decomposition to the sales data
+require(graphics)
+
+fit <- stl(test, s.window=7, robust=TRUE)
 plot(fit)
