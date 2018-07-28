@@ -1,5 +1,5 @@
 #clean up env
-rm(list = ls())
+#rm(list = ls())
 
 #loading sales data with dates and formatting the date field as date in R
 library(readr)
@@ -11,4 +11,11 @@ library(readr)
 WeatherData <- read_csv("LondonWeather2013-2018.csv")
 weatherdates <- as.Date(WeatherData$DATE, "%d/%m/%Y")
 #View(weatherdates)
+WeatherData$DATE <- weatherdates
 
+#need to transform sales data into a ts (time series) object
+
+library(xts)
+
+fit <- stl(SalesData, t.window=15, s.window="periodic", robust=TRUE)
+plot(fit)
