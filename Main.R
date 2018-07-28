@@ -29,5 +29,3 @@ fit <- stl(test, s.window=12, robust=TRUE)
 plot(fit)
 
 
-ts(1:40, frequency = 1, start = 1) 
-print( ts(1:40, frequency = 7, start = c(1959)), calendar = TRUE)
