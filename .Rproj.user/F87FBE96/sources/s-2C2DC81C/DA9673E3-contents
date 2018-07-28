@@ -17,12 +17,17 @@ WeatherData$DATE <- weatherdates
 
 library(xts)
 #DailySales <- xts(SalesData$Date, order.by = SalesData$Date) didn't work as expected
-test <- ts(SalesData)
+test <- ts(SalesData$`Tickets Sold`, start = 1, frequency = 7)
 is.ts(test)
-summary(test)
+test
+
 
 #fitting a STL decomposition to the sales data
 require(graphics)
 
-fit <- stl(test, s.window=7, robust=TRUE)
+fit <- stl(test, s.window=12, robust=TRUE)
 plot(fit)
+
+
+ts(1:40, frequency = 1, start = 1) 
+print( ts(1:40, frequency = 7, start = c(1959)), calendar = TRUE)
