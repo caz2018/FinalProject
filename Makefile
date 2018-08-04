@@ -29,7 +29,7 @@ src/sales.csv: bak/AllHistoricalData.csv
 ## The month year is an odd string
 src/gbp-usd.csv: bak/GBP_USD.csv
 	dos2unix < $< > $(tfile)
-	sed -e 's/"//g' -e 's/%//g' < $(tfile) | sed 's/^\([A-Za-z]*\) \(.*\)$$/\1,\2/g' | sed -e 's/ //g' -e 's/,0/,/g' > $@
+	sed -e 's/"//g' -e 's/%//g' < $(tfile) | sed 's/^\([A-Za-z]*\) \(.*\)$$/\1,\2/g' | sed -e 's/ //g' -e 's/,0/,/g' | awk -F, 'BEGIN { OFS=","} NR == 1 { $$1="Year"; $$0="Month,Day,"$$0; } { print }' > $@
 
 ## UCS-2 (BOM)
 ## A load of blanks
