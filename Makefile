@@ -4,7 +4,7 @@
 ## The commands are embedded in this Makefile, so $ in the command strings has to
 ## replaced with $$
 
-TARGETS ?= $(addprefix src/, sales.csv gbp-usd.csv london.csv)
+TARGETS ?= $(addprefix src/, sales.csv gbp-usd.csv london.csv usd-gbp.csv)
 
 tfile := $(shell tempfile)
 tfile1 := $(shell tempfile)
@@ -30,6 +30,10 @@ src/sales.csv: bak/AllHistoricalData.csv
 src/gbp-usd.csv: bak/GBP_USD.csv
 	dos2unix < $< > $(tfile)
 	sed -e 's/"//g' -e 's/%//g' < $(tfile) | sed 's/^\([A-Za-z]*\) \(.*\)$$/\1,\2/g' | sed -e 's/ //g' -e 's/,0/,/g' | awk -F, 'BEGIN { OFS=","} NR == 1 { $$1="Year"; $$0="Month,Day,"$$0; } { print }' > $@
+
+src/usd-gbp.csv: bak/daily_csv.csv
+	dos2unix < $< > $(tfile)
+	awk -F, 'BEGIN { OFS="," } NR == 1 { print; next } $$2 ~ /United Kingdom/ { print }' $(tfile) > $@
 
 ## UCS-2 (BOM)
 ## A load of blanks
