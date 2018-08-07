@@ -14,7 +14,7 @@ library(lubridate)
 library(ggplot2)
 
 library(readr)
-df1 <- read_csv("sales0-M.csv", col_types = cols(dt0 = col_date(format = "%Y-%m")))
+df1 <- read_csv("src/sales0-M.csv", col_types = cols(dt0 = col_date(format = "%Y-%m")))
 View(df1)
 
 ## reshape this
@@ -26,8 +26,9 @@ p0 <- ggplot(data = df1m, aes(dt0, log(value), group=variable, colour=variable) 
 
 df2 <- df1m[ df1m$variable == "sales", ]
 
+## Force a log on the value and the decomposition is better.
 data1 <- df2 %>% select(dt0, value) %>% 
-  mutate(yr0=as.integer(year(dt0)), month0=as.integer(month(dt0))) %>%
+  mutate(yr0=as.integer(year(dt0)), month0=as.integer(month(dt0)), value=log(value)) %>%
   select(dt0, yr0, month0, value)
 
 data2 <- ts(data1$value, 
