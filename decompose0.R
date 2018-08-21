@@ -1,12 +1,12 @@
-## weaves
+## 
 ##
-## Observed change in claims after 2016-07
+## Observed change in sales after 2013-01
 ## 
 
 rm(list=ls())
 gc()
 
-## For footways
+
 
 library(dplyr)
 library(reshape2)

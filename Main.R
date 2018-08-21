@@ -15,8 +15,6 @@ WeatherData$DATE <- weatherdates
 
 #need to transform sales data into a ts (time series) object
 
-library(xts)
-#DailySales <- xts(SalesData$Date, order.by = SalesData$Date) didn't work as expected
 test <- ts(SalesData$`Tickets Sold`, start = 1, frequency = 7)
 is.ts(test)
 test
