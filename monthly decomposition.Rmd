@@ -1,0 +1,67 @@
+---
+title: "DecompositionProject"
+author: "Caroline Silvestre"
+date: "21/08/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+## Simple decomposition of monthly average of sales with observed change in sales between 2013-01 and 2018-06
+## 
+```{r}
+rm(list=ls())
+gc()
+
+
+
+library(dplyr)
+library(reshape2)
+library(lubridate)
+library(ggplot2)
+
+library(readr)
+df1 <- read_csv("src/sales0-M.csv", col_types = cols(dt0 = col_date(format = "%Y-%m")))
+View(df1)
+```
+## reshaping the data using the melt function
+```{r}
+df1m <- melt(df1, id.vars = c("dt0"))
+
+p0 <- ggplot(data = df1m, aes(dt0, log(value), group=variable, colour=variable) ) + 
+  geom_line(size = 0.8) + theme_bw()
+
+df2 <- df1m[ df1m$variable == "sales", ]
+```
+
+## Force a log on the value and the decomposition is better.
+```{r normalising the data}
+data1 <- df2 %>% select(dt0, value) %>% 
+  mutate(yr0=as.integer(year(dt0)), month0=as.integer(month(dt0)), value=log(value)) %>%
+  select(dt0, yr0, month0, value)
+```
+
+```{r decomposing using simple decomposition}
+data2 <- ts(data1$value, 
+            start=c(data1$yr0[1], data1$month0[1]), 
+            end=c(data1$yr0[nrow(data1)], data1$month0[nrow(data1)]), 
+            frequency=12)
+
+sales0 <- decompose(data2)
+
+jpeg(filename=paste("decompose", "-%03d.jpeg", sep=""), 
+     width=1024, height=768)
+
+print(p0)
+
+plot(sales0)
+title("Sales")
+
+x0 <- lapply(dev.list(), function(x) dev.off(x))
+```
+
+
