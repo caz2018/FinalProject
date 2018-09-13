@@ -5,7 +5,7 @@
 ## Convert year and month to a date - BoM
 data0 <- read.csv(x.args[1], stringsAsFactors=FALSE)
 x.dt0 <- data0[["dt0"]]
-x.dt0 <- sapply(data0[["dt0"]], function(x) paste(x, "-01", sep=""))
+x.dt0 <- sapply(x.dt0, function(x) paste(x, "-01", sep=""))
 data0[["dt1"]] <- as.Date(x.dt0, format="%Y-%m-%d")
 
 ## Make the date an EoM
@@ -20,6 +20,28 @@ data0 <- merge(data0, dh0, by="mm0")
 
 ## Order this
 data0 <- data0[ order(data0$dt1), ]
+
+## Add a log of sales
+data0[["sales0"]] <- log(data0[["sales"]])
+
+## Make FX more explicit by inverting
+data0[["fx1"]] <- 1 / data0[["fx0"]]
+
+## Make weather more explicit by inverting
+m0 <- max(data0[["weather"]])
+data0[["weather1"]] <- abs(data0[["weather"]] - m0)
+
+## Log the sales
+# data0[["lsales"]] <- log(data0[["sales"]])
+
+data1 <- sapply(data0[, c("fx1", "sales", "weather1")], 
+                function(x) scale(x, scale=TRUE, center=TRUE))
+data1 <- as.data.frame(data1)
+colnames(data1) <- paste("s.", colnames(data1), sep="")
+
+data0 <- cbind(data0, data1)
+
+
 
 ## Exponentially weighted moving average
 
