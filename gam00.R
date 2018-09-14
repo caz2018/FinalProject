@@ -23,6 +23,18 @@ data0 <- data0[ order(data0$dt1), ]
 
 ## Add a log of sales
 data0[["sales0"]] <- log(data0[["sales"]])
+d0 <- data0[["sales0"]]
+d1 <- d0 - min(d0)
+
+### Try and remove the growth
+scatter.smooth(x=1:length(d1), y=d1)    # see a scatter
+plot(density(d1))                       # strange distribution
+
+## Make a model
+d2 <- data.frame(sales1=d1,idx=1:length(d1))
+mdl0 <- lm(sales1 ~ idx, data=d2)
+
+data0[["sales1"]] <- d1 - mdl0$fitted.values
 
 ## Make FX more explicit by inverting
 data0[["fx1"]] <- 1 / data0[["fx0"]]
@@ -31,17 +43,17 @@ data0[["fx1"]] <- 1 / data0[["fx0"]]
 m0 <- max(data0[["weather"]])
 data0[["weather1"]] <- abs(data0[["weather"]] - m0)
 
-## Log the sales
-# data0[["lsales"]] <- log(data0[["sales"]])
+## Remove some growth
+s0 <- summary(data0[["sales0"]])
 
-data1 <- sapply(data0[, c("fx1", "sales", "weather1")], 
+## Scale and centre
+
+data1 <- sapply(data0[, c("fx1", "sales", "sales0", "sales1", "weather1")], 
                 function(x) scale(x, scale=TRUE, center=TRUE))
 data1 <- as.data.frame(data1)
 colnames(data1) <- paste("s.", colnames(data1), sep="")
 
 data0 <- cbind(data0, data1)
-
-
 
 ## Exponentially weighted moving average
 
