@@ -28,7 +28,7 @@ print(summary(SalesData$Norm))
 #need to transform sales data into a ts (time series) object and then into a msts (multi-seasonal time-series)
 
 timeseriesItems <- ts( SalesData$Daily_Items_Sold, start = c(2014,001) , frequency = 365.25)
-autoplot(timeserieItems) + ylab("Sales volume") + xlab("Year")
+autoplot(timeseriesItems) + ylab("Sales volume") + xlab("Year")
 
 timeseriesValue <- ts( SalesData$Total_Daily_Value, start = c(2014,001) , frequency = 365.25)
 autoplot(timeseriesValue) + ylab("Sales Value") + xlab("Year")
@@ -36,13 +36,11 @@ autoplot(timeseriesValue) + ylab("Sales Value") + xlab("Year")
 timeseriesNorm <- ts( SalesData$Norm, start = c(2014,001) , frequency = 365.25)
 autoplot(timeseriesNorm) + ylab("Sales Volume Normalised") + xlab("Year")
 
-#decomposing the data for different seasonal periods
-
-
-#yearly seasonality period of sales volumes with plots of full period and year one
+#yearly seasonality period only of sales volumes with plots of full period
 salesmsts_y <- msts(timeseriesItems, seasonal.periods=c(364.25))
 xy <- mstl(salesmsts_y, iterate = 3)
 autoplot(xy)
+
 xp <- autoplot(xy) +
   ylab("Sales volume") + xlab("Year")
 p2 <- autoplot(window(xy, start=1, end=2)) +
@@ -56,9 +54,9 @@ salesmsts_wmy <- msts(timeseriesItems, seasonal.periods=c(7,30.5,365.25))
 salesmsts_wy <- msts(timeseriesItems, seasonal.periods=c(7,365.25))
 xwmy <- mstl(salesmsts_wmy, iterate = 3)
 xwy <- mstl(salesmsts_wy, iterate = 3)
-autoplot(xwmy)
-xp <- autoplot(xwmy) +
+autoplot(xwmy) +
   ylab("Sales volume") + xlab("Year")
+
 p2 <- autoplot(window(xwmy, start=2, end=3)) +
   ylab("Sales volume") + xlab("Year 2 Close-up") + 
   scale_x_continuous(breaks = c(seq(2, 2.90, length.out=12)), labels=month.abb)
@@ -85,26 +83,20 @@ salesmsts_wmy %>%  stlf() %>% autoplot()
 
 #When x is a msts object, then K should be a vector of integers specifying the
 # number of sine and cosine terms for each of the seasonal periods. 
-#To find the best number of Fourier terms by computing the lowest AICc
-bestfit <- list(aicc=Inf)
-for(K in seq(182)) {
-  fit <- auto.arima(salesmsts_y, xreg=fourier(salesmsts_y, K=K),
-                    seasonal=FALSE)
-  if(fit[["aicc"]] < bestfit[["aicc"]]) {
-    bestfit <- fit
-    bestK <- K
-  }
-}
+#To find the best number of Fourier terms by computing the lowest AICc - the below code has taken over 
+#12 hours to run without going past 57, therefore an inpractical addition. The max will be used instead.
+
+fit <- auto.arima(salesmsts_y, xreg=fourier(salesmsts_y, K=57),
+                   seasonal=FALSE)
+fit[["aicc"]]
 
 
-fityear <- auto.arima(salesmsts_m, seasonal=FALSE,
-                  xreg=fourier(salesmsts_m, K=c(14)))
-fityear %>% forecast(xreg=fourier(salesmsts_m, K=c(12), h=1*336)) %>% autoplot(include=6*336)
 
-
-#arima fcast with wmy didn't improve accuracy dramatically, but it is a good model and more likely to be replicable with other data
-fitwmy <- auto.arima(salesmsts_wmy, seasonal=FALSE,
-                      xreg=fourier(salesmsts_wmy, K=c(3,15,180)))
-fitwmy %>% forecast(xreg=fourier(salesmsts_wmy, K=c(3,15,180), h=2*336)) %>% autoplot(include=7*336)
+#arima fcast with week, month and year seasonalities takes over 5 min to run
+#so only wekly and yearly will be used
+#it also didn't improve accuracy dramatically.
+fitwy <- auto.arima(salesmsts_wy, seasonal=FALSE,
+                      xreg=fourier(salesmsts_wy, K=c(3,52), seasonal=FALSE))
+fitwy %>% forecast(xreg=fourier(salesmsts_wmy, K=c(3,52), h=1*336)) %>% autoplot(include=6*336)
 
 
