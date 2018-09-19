@@ -2,14 +2,13 @@
 rm(list = ls())
 
 library(readr)
-library(DescTools)
 library(stats)
 library(dplyr)
 library(reshape2)
 library(lubridate)
 library(ggplot2)
-library(BBmisc)
 library(forecast)
+library(BBmisc)
 
 #read data from csv and loading sales data with dates and formatting the date field as date in R
 #Note: file must be a csv and the date order must be oldest to newest in the file.
@@ -21,60 +20,65 @@ dates <- as.Date(SalesData$Date, "%Y/%m/%d")
 SalesData$Date <- dates
 
 #adding a normalized version of tickets sold to the dataframe, using a 1 to 10 range to avoid zero values
-SalesData$Norm <- normalize(SalesData$Daily_Items_Sold, method="range", range=c(1,10))
-print(summary(SalesData$Norm))
+SalesData$ValNorm <- normalize(SalesData$Total_Daily_Value , method="range", range=c(1,100))
+print(summary(SalesData$ValNorm))
 
 
 #need to transform sales data into a ts (time series) object and then into a msts (multi-seasonal time-series)
 
 timeseriesItems <- ts( SalesData$Daily_Items_Sold, start = c(2014,001) , frequency = 365.25)
-autoplot(timeseriesItems) + ylab("Sales volume") + xlab("Year")
+autoplot(timeseriesItems) + ylab("Sales Volume") + xlab("Year")
 
 timeseriesValue <- ts( SalesData$Total_Daily_Value, start = c(2014,001) , frequency = 365.25)
 autoplot(timeseriesValue) + ylab("Sales Value") + xlab("Year")
 
-timeseriesNorm <- ts( SalesData$Norm, start = c(2014,001) , frequency = 365.25)
-autoplot(timeseriesNorm) + ylab("Sales Volume Normalised") + xlab("Year")
+timeseriesATV <- ts( SalesData$Avg_Trans_Value_GBP, start = c(2014,001) , frequency = 365.25)
+autoplot(timeseriesATV) + ylab("Average Transaction Value") + xlab("Year")
 
-#yearly seasonality period only of sales volumes with plots of full period
-salesmsts_y <- msts(timeseriesItems, seasonal.periods=c(364.25))
-xy <- mstl(salesmsts_y, iterate = 3)
-autoplot(xy)
+timeseriesValNorm <- ts( SalesData$ValNorm, start = c(2014,001) , frequency = 365.25)
+autoplot(timeseriesValNorm) + ylab("Sales Volume Normalised") + xlab("Year")
 
-xp <- autoplot(xy) +
-  ylab("Sales volume") + xlab("Year")
-p2 <- autoplot(window(xy, start=1, end=2)) +
-  ylab("Sales volume") + xlab("Year 1 Close-up") + 
+
+#function to see decomposed data for yearly seasonality only 
+
+weekly <- 7
+monthly <- 30.5
+yearly <- 364.25
+#custom <- user_input - if time allows for the development of custom values
+
+salesmsts_d <- function(timeseries_obj,s1=NULL,s2=NULL,s3=NULL) {
+  salesmsts <- msts(timeseries_obj, start = c(2014,001), seasonal.periods=c(s1,s2,s3))
+  xy1 <- mstl(salesmsts, iterate = 3)
+  return(xy1) 
+}
+  
+dV <- salesmsts_d(timeseriesValue, yearly,weekly)
+
+autoplot(dV) + ylab("Daily Sales Value") + xlab("Year")
+
+
+p1 <- autoplot(window(dV, start=1, end=2)) +
+  ylab("Sales Value") + xlab("First Year Close-up") + 
   scale_x_continuous(breaks = c(seq(1, 1.90, length.out=12)), labels=month.abb)
-gridExtra::grid.arrange(xp,p2)
-
-
-#Combine weekly, monthly, and yearly seasonality period of sales volumes
-salesmsts_wmy <- msts(timeseriesItems, seasonal.periods=c(7,30.5,365.25))
-salesmsts_wy <- msts(timeseriesItems, seasonal.periods=c(7,365.25))
-xwmy <- mstl(salesmsts_wmy, iterate = 3)
-xwy <- mstl(salesmsts_wy, iterate = 3)
-autoplot(xwmy) +
-  ylab("Sales volume") + xlab("Year")
-
-p2 <- autoplot(window(xwmy, start=2, end=3)) +
-  ylab("Sales volume") + xlab("Year 2 Close-up") + 
+p2 <- autoplot(window(dV, start=2, end=3)) +
+  ylab("Sales") + xlab("Year 2 Close-up") + 
   scale_x_continuous(breaks = c(seq(2, 2.90, length.out=12)), labels=month.abb)
-p3 <- autoplot(window(xwmy, start=2.50, end=3)) +
-  ylab("Sales volume") + xlab("Year 2, 2nd half, Close-up") + 
+p3 <- autoplot(window(dV, start=2.50, end=3)) +
+  ylab("Sales") + xlab("Year 2, 2nd half, Close-up") + 
   scale_x_continuous(breaks = c(seq(2, 2.90, length.out=12)), labels=month.abb)
-p4 <- autoplot(window(xwy, start=2.75, end=3)) +
+p4 <- autoplot(window(dV, start=2.75, end=3)) +
   ylab("Sales volume") + xlab("Year 2, 3rd Q, Close-up") + 
   scale_x_continuous(breaks = c(seq(2, 2.90, length.out=12)), labels=month.abb)
 
-gridExtra::grid.arrange(p2, p3, p4)
+gridExtra::grid.arrange(p1, p2, p3, p4)
 
 
 #using normalised set, no plot generated
-salesNormmsts_mwy <- msts(timeseriesNorm, seasonal.periods=c(7,30.5,365.25))
+salesNormmsts_mwy <- msts(timeseriesValNorm, seasonal.periods=c(7,30.5,365.25))
 xnorm_wmy <- mstl(salesNormmsts_mwy, lambda = "auto", iterate = 3)
 autoplot(xnorm_wmy)
 xdat <- as.data.frame(xnorm_wmy)
+xdat$Date <- dates
 
 
 #forecasting based on sales data and seasonality only
