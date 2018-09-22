@@ -1,5 +1,3 @@
-## weaves
-##
 ## Support for GAM.
 
 ## Exponentially weighted moving average
@@ -44,12 +42,6 @@ data0[["dt1"]] <- data0[["dt1"]] + months(1) - days(1)
 ### add the number of the month
 data0[["mm0"]] <- month(data0[["dt1"]])
 
-## Daylight hours for each month
-dh0 <- read.csv("src/dhm.csv")
-data0 <- merge(data0, dh0, by="mm0")
-
-## Order this
-data0 <- data0[ order(data0$dt1), ]
 
 ## Add a log of sales
 data0[["sales0"]] <- log(data0[["sales"]])
@@ -90,9 +82,6 @@ data0[["growth"]] <- mdl0$fitted.values
 ## Make FX more explicit by inverting
 data0[["fx1"]] <- 1 / data0[["fx0"]]
 
-## Make weather more explicit by inverting
-m0 <- max(data0[["weather"]])
-data0[["weather1"]] <- abs(data0[["weather"]] - m0)
 
 ## Remove some growth
 s0 <- summary(data0[["sales0"]])

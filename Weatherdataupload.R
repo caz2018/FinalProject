@@ -10,7 +10,7 @@ WeatherData$DATE <- weatherdates
 newdf <- merge(SalesData, WeatherData, by.x = "Date", by.y = "DATE")
 summary(newdf)
 
-#standardizing the weather data
+#standardizing and normalising the weather data
 newdf$PRCP <- normalize(newdf$PRCP, method="range", range = c(1,10))
 newdf$TAVG <- normalize(newdf$TAVG, method="range", range = c(1,10))
 newdf$PRCP <- normalize(newdf$PRCP, method="range", range = c(1,10))

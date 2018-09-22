@@ -9,6 +9,9 @@ library(lubridate)
 library(ggplot2)
 library(forecast)
 library(BBmisc)
+library(zoo)
+
+
 
 #read data from csv and loading sales data with dates and formatting the date field as date in R
 #Note: file must be a csv and the date order must be oldest to newest in the file.
@@ -18,6 +21,16 @@ print(summary(SalesData))
 dates <- as.character(SalesData$Date)
 dates <- as.Date(SalesData$Date, "%Y/%m/%d")
 SalesData$Date <- dates
+SalesData$DoW <- weekdays.Date(dates)
+SalesData$WeekNum <- recode(SalesData$DoW,'Monday'=1,'Tuesday'=2, 'Wednesday'=3,'Thursday'=4,
+                                        'Friday'=5,'Saturday'=6,'Sunday'=7)
+## Make the date an EoM
+require("lubridate")
+SalesData$Month <-NULL
+### add the number of the month
+SalesData$MonthNum <- month(SalesData$Date)
+SalesData$MonthFactor <- recode(SalesData$MonthNum, '1'="Jan", '2'= "Feb", '3'= "Mar", '4'= "Apr", '5'= "May",
+                                '6'= "Jun", '7'="Jul",'8' = "Aug", '9'= "Sep", '10' = "Oct", '11'= "Nov", '12' = "Dec")
 
 #adding a normalized version of tickets sold to the dataframe, using a 1 to 10 range to avoid zero values
 SalesData$ValNorm <- normalize(SalesData$Total_Daily_Value , method="range", range=c(1,100))
