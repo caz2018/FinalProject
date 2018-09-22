@@ -58,11 +58,16 @@ window <- N / week_period # number of periods in the train set
 require(data.table)
 matrix_gam <- data.table(Load = data_train[ ,"Freq.Total_Daily_Value" ],
                          Daily = rep(1:week_period, window),
+                         Monthly = data_r[, "Freq.MonthNum" ],
                         Weekly = data_r[,"Freq.WeekNum" ])  
 
-gam_1 <- gam(Load ~ s(Weekly, bs = "ps", k = week_period),
+gam_1 <- gam(Load ~ s(Weekly, bs = "ps", k = week_period) +
+               s(Monthly, bs = "cr", k = 12),
+             
              data = matrix_gam,
              family = gaussian)  
 
 layout(matrix(1:2, nrow = 1))
 plot(gam_1, shade = TRUE)
+
+
