@@ -47,17 +47,12 @@ ggplot(data_r, aes( data_r$Freq.MonthFactor, data_r$Freq.Total_Daily_Value)) +
         axis.title = element_text(size = 8, face = "bold")) +
   labs(x = "Day of the week", y = "Avg Daily Sales GBP")
 
-#weekly seasonality training data
-a = nrow(DT)*0.5
-data_train <- DT[0:a,]
-data_test <- DT[-data_train]
 
-N <- nrow(data_train) # number of observations in the train set
+N <- nrow(data_r) # number of observations
 
 window <- N / week_period # number of periods in the train set
 require(data.table)
-matrix_gam <- data.table(Load = data_train[ ,"Freq.Total_Daily_Value" ],
-                         Daily = rep(1:week_period, window),
+matrix_gam <- data.table(Load = data_r[ ,"Freq.Total_Daily_Value" ],
                          Monthly = data_r[, "Freq.MonthNum" ],
                         Weekly = data_r[,"Freq.WeekNum" ])  
 
@@ -70,4 +65,44 @@ gam_1 <- gam(Load ~ s(Weekly, bs = "ps", k = week_period) +
 layout(matrix(1:2, nrow = 1))
 plot(gam_1, shade = TRUE)
 
+summary(gam_1)
 
+#Plotting fitted values
+df1 <- data.table(value = gam_1$fitted.values, data_time = data_r[ , "Freq.Date"] )
+df2 <- data.table(value = data_r$Freq.Total_Daily_Value, data_time = data_r[ , "Freq.Date"] )
+df1$type <- "Fitted"
+df2$type <- "Real"
+
+datas <- rbind(df1,df2)
+  
+datas[, type := c(rep("Real", nrow(data_r)), rep("Fitted", nrow(data_r)))]
+
+ggplot(data = datas, aes(data_time, value, group = type, colour = type)) +
+  geom_line(size = 0.8) +
+  theme_bw() +
+  labs(x = "Time", y = "Sales",
+       title = "Fit from GAM n.1")
+#with season
+gam_2 <- gam(Load ~ s(Weekly, Monthly),
+             data = matrix_gam,
+             family = gaussian)
+
+summary(gam_2)$r.sq
+summary(gam_1)$r.sq
+summary(gam_2)$s.table
+summary(gam_1)$s.table
+#Plotting fitted values
+dfs1 <- data.table(value = gam_2$fitted.values, data_time = data_r[ , "Freq.Date"] )
+dfs2 <- data.table(value = data_r$Freq.Total_Daily_Value, data_time = data_r[ , "Freq.Date"] )
+df1$type <- "Fitted"
+df2$type <- "Real"
+
+dataseason <- rbind(dfs1,dfs2) 
+
+dataseason[, type := c(rep("Fitted", nrow(data_r)), rep("Real", nrow(data_r)))]
+
+ggplot(data = dataseason, aes(data_time, value, group = type, colour = type)) +
+  geom_line(size = 0.8) +
+  theme_bw() +
+  labs(x = "Time", y = "Sales",
+       title = "Fit from GAM n.1")
