@@ -39,9 +39,16 @@ summary(newdf)
 
 
 #standardizing and normalising the weather and currency data
-newdf$PRCP <- normalize(newdf$PRCP, method="range", range = c(0,10))
+newdf$PRCP[newdf$PRCP > 0] <- 1
+newdf$PRCP <- as.factor(newdf$PRCP)
+#change temp as factor according to the weekly average
+
 newdf$TAVG <- normalize(newdf$TAVG, method="range", range = c(1,10))
+
+#normalise price
 newdf$Price <- normalize(newdf$Price, method="range", range = c(1,10))
+
+#change days of week and month as factors
 
 summary(newdf)
 

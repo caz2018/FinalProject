@@ -18,6 +18,7 @@ n_monthFact <- unique(DT[, "Freq.MonthFactor" ])
 n_monthn <- unique(DT[, "Freq.MonthNum" ])
 n_temp <- unique(DT[, "Freq.TAVG"])
 n_rain <- unique(DT[, "Freq.PRCP"])
+n_price <- unique(DT[, "Freq.Price"])
 week_period <- 7
 year_period <- 365.25
 #Weekly seasonality close-up - needs ordering
@@ -46,6 +47,32 @@ ggplot(data_r, aes( data_r$Freq.MonthFactor, data_r$Freq.Total_Daily_Value)) +
         axis.text = element_text(size = 8),
         axis.title = element_text(size = 8, face = "bold")) +
   labs(x = "Day of the week", y = "Avg Daily Sales GBP")
+
+#Currency close-up - needs ordering
+
+ggplot(data_r, aes( data_r$Freq.Price , data_r$Freq.Total_Daily_Value)) +
+  geom_line() +
+  theme(panel.border = element_blank(),
+        panel.background = element_blank(),
+        panel.grid.minor = element_line(colour = "grey90"),
+        panel.grid.major = element_line(colour = "grey90"),
+        panel.grid.major.x = element_line(colour = "grey90"),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8, face = "bold")) +
+  labs(x = "Currency", y = "Avg Daily Sales GBP")
+
+#Precipitation close-up - needs ordering
+
+ggplot(data_r, aes( data_r$Freq.PRCP , data_r$Freq.Total_Daily_Value)) +
+  geom_line() +
+  theme(panel.border = element_blank(),
+        panel.background = element_blank(),
+        panel.grid.minor = element_line(colour = "grey90"),
+        panel.grid.major = element_line(colour = "grey90"),
+        panel.grid.major.x = element_line(colour = "grey90"),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8, face = "bold")) +
+  labs(x = "Rainfall", y = "Avg Daily Sales GBP")
 
 
 N <- nrow(data_r) # number of observations
