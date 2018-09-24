@@ -55,14 +55,14 @@ Temperature  <- as.data.frame(tavg.decomp)
 Temperature$Date <- newdf$Date
 #merge datasets again
 newdf <- merge(newdf, Temperature, by.x = "Date", by.y = "Date", all.x = TRUE )
+#not sure if this data should be normalised
 
- <- normalize(newdf$TAVG, method="range", range = c(1,10))
-
-
-#normalise price
+#normalise currency price
 newdf$Price <- normalize(newdf$Price, method="range", range = c(1,10))
 
 #change days of week and month as factors
+newdf$DoW <- as.factor(newdf$DoW)
+newdf$MonthFactor <- as.factor(newdf$)
 
 summary(newdf)
 

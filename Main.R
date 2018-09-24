@@ -24,51 +24,66 @@ print(summary(SalesData))
 #if not then request to re-upload the file
 date <- ymd(SalesData$Date)
 SalesData$Date <- date
-SalesData$DoW <- weekdays.Date(date)
+SalesData$DoW <- as.factor(weekdays.Date(date))
 SalesData$WeekNum <- recode(SalesData$DoW,'Monday'=1,'Tuesday'=2, 'Wednesday'=3,'Thursday'=4,
                                         'Friday'=5,'Saturday'=6,'Sunday'=7)
+summary(SalesData)
 ## Make the date an EoM
 require("lubridate")
 ### add the number of the month
 SalesData$MonthNum <- month(SalesData$Date)
-SalesData$MonthFactor <- recode(SalesData$MonthNum, '1'="Jan", '2'= "Feb", '3'= "Mar", '4'= "Apr", '5'= "May",
-                                '6'= "Jun", '7'="Jul",'8' = "Aug", '9'= "Sep", '10' = "Oct", '11'= "Nov", '12' = "Dec")
-
-#adding a normalized version of daily sales values to the dataframe, using a 1 to 10 range to avoid zero values
-SalesData$ValNorm <- normalize(SalesData$Total_Daily_Value , method="range", range=c(1,10))
-
-#need to transform sales data into ts (time series) objects and then into a msts (multi-seasonal time-series). The default is daily.
-timeseriesItems <- ts( SalesData$Daily_Items_Sold, start = c(2014,001) , frequency = 365.25)
-autoplot(timeseriesItems) + ylab("Daily Items") + xlab("Year")
-
-timeseriesValue <- ts( SalesData$Total_Daily_Value, start = c(2014,001) , frequency = 365.25)
-autoplot(timeseriesValue) + ylab("Daily Value GBP") + xlab("Year")
-
-timeseriesATV <- ts( SalesData$Avg_Trans_Value_GBP, start = c(2014,001) , frequency = 365.25)
-autoplot(timeseriesATV) + ylab("Average Transaction Value") + xlab("Year")
-
-timeseriesValNorm <- ts( SalesData$ValNorm, start = c(2014,001) , frequency = 365.25)
-autoplot(timeseriesValNorm) + ylab("Sales Volume Normalised") + xlab("Year")
+SalesData$MonthFactor <- as.factor(recode(SalesData$MonthNum, '1'="Jan", '2'= "Feb", '3'= "Mar", '4'= "Apr", '5'= "May",
+                                '6'= "Jun", '7'="Jul",'8' = "Aug", '9'= "Sep", '10' = "Oct", '11'= "Nov", '12' = "Dec"))
+summary(SalesData)
 
 #setting the seasonality variables
 weekly <- 7
 monthly <- 30.5
 yearly <- 364.25
 
-#function for decomposing data series - timeseries_obj is the chosen measure, seasonal periods are the chosen season(s)
-#By default the Full Daily Sales Value will be used for ease of visualisation, alongside weekly and yearly patterns.
+#adding a normalized version of daily sales values to the dataframe, using a 1 to 10 range to avoid zero values
+SalesData$ValNorm <- normalize(SalesData$Total_Daily_Value , method="range", range=c(1,10))
 
-decomp<- function(timeseries_obj,s1=NULL,s2=NULL,s3=NULL) {
-  a = msts(timeseries_obj, start = c(2014,001), seasonal.periods=c(s1,s2,s3))
-  xy1 <- mstl(a, iterate = 3)
-  return(xy1) 
+#need to transform sales data into ts (time series) objects and then into a msts (multi-seasonal time-series). The default is daily.
+#function to transform a vector into a time series object. Need the day of the year as a number from 1 to 365/366.
+#freq is the data interval, for daily data use yearly.
+ts.transform <- function(univariateseries, YYYY,DDD, freq){
+  x = ts(univariateseries, start = c(YYYY,DDD) , frequency = freq)
+  return(x)
 }
 
-decVals <- decomp(timeseriesValue, yearly,weekly)
+tsVal <- ts.transform(SalesData$Total_Daily_Value, 2014,001, yearly)
+autoplot(tsVal) + ylab("Daily Value")+ xlab("Year")
 
+tsItems <- ts.transform(SalesData$Daily_Items_Sold, 2014,001, yearly)
+autoplot(tsItems) + ylab("Daily Items") + xlab("Year")
+
+tsATV <- ts.transform(SalesData$Avg_Trans_Value_GBP, 2014,001, yearly)
+autoplot(tsATV) + ylab("Average Transaction Value") + xlab("Year")
+
+tsValNorm <- ts.transform(SalesData$ValNorm,2014,001, yearly)
+autoplot(tsValNorm) + ylab("Sales Volume Normalised") + xlab("Year")
+
+#function for transforming a time series object into a msts, which is a multiple-series time series
+
+msts.transform <- function(tsobj, YYYY,DDD,s1=NULL,s2=NULL,s3=NULL){
+  a = msts(tsobj, start = c(2014,001), seasonal.periods=c(s1,s2,s3))
+  return(a)
+}
+
+#function to decompose both single-seasonal and multi-seasonal time-series
+decomp.msts <- function(mstsobj){
+  xy1 = mstl(mstsobj, iterate = 3)
+  return(xy1)
+}
+
+#By default the Full Daily Sales Value will be used for ease of visualisation, with yearly only yearly and weekly pattern.
+mstsVal <- msts.transform(tsVal, 2014,001, weekly, yearly)
+decVals <- decomp.msts(mstsVal)
 autoplot(decVals) + ylab("Daily Value") + xlab("Year")
 
-#generating a decomposition of a normalised set, for use with other variables.
+
+#generating a decomposition of the normalised Daily sales values for use in the analysis in conjunction with other variables.
 salesNormmsts_mwy <- msts(timeseriesValNorm, seasonal.periods=c(7,30.5,365.25))
 xnorm_wmy <- mstl(salesNormmsts_mwy, lambda = "auto", iterate = 3)
 autoplot(xnorm_wmy)
@@ -76,6 +91,10 @@ summary(xnorm_wmy)
 #generating a dataset with decomposed values to use with GAM
 dat_decomp <- as.data.frame(xnorm_wmy)
 dat_decomp$Date <- date
+
+#mergin the decomposition to the original data frame
+SalesData<- merge(SalesData, dat_decomp, by.x = "Date", by.y = "Date", all.x = TRUE)
+summary(SalesData)
 
 
 #forecasting based on sales data and seasonality only

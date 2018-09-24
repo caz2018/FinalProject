@@ -8,6 +8,7 @@ library(animation)
 
 #reading dataframe as data.table
 DT <- as.data.frame.table(newdf)
+summary(DT)
 
 #Setting variables
 
@@ -19,6 +20,7 @@ n_monthn <- unique(DT[, "Freq.MonthNum" ])
 n_temp <- unique(DT[, "Freq.TAVG"])
 n_rain <- unique(DT[, "Freq.PRCP"])
 n_price <- unique(DT[, "Freq.Price"])
+n_temp_variation <- unique(DT[, "Freq.Remainder.y"])
 week_period <- 7
 year_period <- 365.25
 #Weekly seasonality close-up - needs ordering
