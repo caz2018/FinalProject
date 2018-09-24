@@ -53,7 +53,7 @@ newdf <- merge(newdf, Temperature, by.x = "Date", by.y = "Date", all.x = TRUE )
 #not sure if this data should be normalised
 
 #normalise currency price
-newdf$Price <- normalize(newdf$Price, method="range", range = c(1,10))
+newdf$currNorm <- normalize(newdf$Price, method="range", range = c(1,10))
 
 #change days of week and month as factors
 newdf$DoW <- as.factor(newdf$DoW)
