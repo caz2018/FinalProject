@@ -41,9 +41,23 @@ summary(newdf)
 #standardizing and normalising the weather and currency data
 newdf$PRCP[newdf$PRCP > 0] <- 1
 newdf$PRCP <- as.factor(newdf$PRCP)
-#change temp as factor according to the weekly average
+#change temp as factor according to the weekly average, using a seasonal decomposition for that
+tavg.ts <- ts(newdf$TAVG)
 
-newdf$TAVG <- normalize(newdf$TAVG, method="range", range = c(1,10))
+decomp.msts<- function(timeseries_obj,s1=NULL,s2=NULL,s3=NULL) {
+  a = msts(timeseries_obj, start = c(2014,001), seasonal.periods=c(s1,s2,s3))
+  xy1 <- mstl(a, iterate = 3)
+  return(xy1) 
+}
+tavg.decomp <- decomp.msts(tavg.ts, 365.25)
+autoplot(tavg.decomp) + ylab("Daily Value") + xlab("Year")
+Temperature  <- as.data.frame(tavg.decomp)
+Temperature$Date <- newdf$Date
+#merge datasets again
+newdf <- merge(newdf, Temperature, by.x = "Date", by.y = "Date", all.x = TRUE )
+
+ <- normalize(newdf$TAVG, method="range", range = c(1,10))
+
 
 #normalise price
 newdf$Price <- normalize(newdf$Price, method="range", range = c(1,10))

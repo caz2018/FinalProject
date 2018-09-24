@@ -22,7 +22,7 @@ ltp <- list()
 
 ## Convert year and month to a date - BoM
 data0 <- read.csv(x.args[1], stringsAsFactors=FALSE)
-x.dt0 <- data0[["dt0"]]
+x.dt0 <- data0[["dt0"]] #date
 x.dt0 <- sapply(x.dt0, function(x) paste(x, "-01", sep=""))
 data0[["dt1"]] <- as.Date(x.dt0, format="%Y-%m-%d")
 

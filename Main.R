@@ -58,15 +58,15 @@ yearly <- 364.25
 #function for decomposing data series - timeseries_obj is the chosen measure, seasonal periods are the chosen season(s)
 #By default the Full Daily Sales Value will be used for ease of visualisation, alongside weekly and yearly patterns.
 
-salesmsts_d <- function(timeseries_obj,s1=NULL,s2=NULL,s3=NULL) {
-  salesmsts = msts(timeseries_obj, start = c(2014,001), seasonal.periods=c(s1,s2,s3))
-  xy1 <- mstl(salesmsts, iterate = 3)
+decomp<- function(timeseries_obj,s1=NULL,s2=NULL,s3=NULL) {
+  a = msts(timeseries_obj, start = c(2014,001), seasonal.periods=c(s1,s2,s3))
+  xy1 <- mstl(a, iterate = 3)
   return(xy1) 
 }
-  
-dV <- salesmsts_d(timeseriesValue, yearly,weekly)
 
-autoplot(dV) + ylab("Daily Value") + xlab("Year")
+decVals <- decomp(timeseriesValue, yearly,weekly)
+
+autoplot(decVals) + ylab("Daily Value") + xlab("Year")
 
 #generating a decomposition of a normalised set, for use with other variables.
 salesNormmsts_mwy <- msts(timeseriesValNorm, seasonal.periods=c(7,30.5,365.25))
