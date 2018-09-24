@@ -16,7 +16,7 @@ WeatherData$PRCP[is.na(WeatherData$PRCP)] <- 0
 CurrencyData <- read.csv("CurrencyExchangeDaily.csv")
 currencydates <- mdy(CurrencyData$Date)
 CurrencyData$Date <- currencydates
-#trading stops on weekends, so NA's will carry the latest value
+#trading stops on weekends, so weekends will carry the latest value after the merge of datasets
 
 #removing data we don't need
 CurrencyData$Open <- NULL
@@ -31,26 +31,21 @@ summary(newdf)
 #adding currency data
 newdf <- merge(newdf, CurrencyData, by.x = "Date", by.y = "Date", all.x = TRUE)
 summary(newdf)
-#dealing with NA's in currency data 
+#replacing NA's in currency data with the last value 
 newdf$Price <- na.locf(newdf$Price)
-#adding decomposition data
-newdf <- merge(newdf, dat_decomp, by.x = "Date", by.y = "Date", all.x = TRUE)
-summary(newdf)
 
-
-#standardizing and normalising the weather and currency data
+#transforming precipitation into factors - 'rain' and 'dry'
 newdf$PRCP[newdf$PRCP > 0] <- 1
 newdf$PRCP <- as.factor(newdf$PRCP)
-#change temp as factor according to the weekly average, using a seasonal decomposition for that
-tavg.ts <- ts(newdf$TAVG)
 
-decomp.msts<- function(timeseries_obj,s1=NULL,s2=NULL,s3=NULL) {
-  a = msts(timeseries_obj, start = c(2014,001), seasonal.periods=c(s1,s2,s3))
-  xy1 <- mstl(a, iterate = 3)
-  return(xy1) 
-}
-tavg.decomp <- decomp.msts(tavg.ts, 365.25)
+
+#running a seasonal decomposition on weather as it is a highly seasonal feature
+tavg.ts <- ts(newdf$TAVG)
+tavg.msts <- msts.transform(tavg.ts,2014,001,yearly)
+tavg.decomp <- decomp.msts(tavg.msts)
+
 autoplot(tavg.decomp) + ylab("Daily Value") + xlab("Year")
+
 Temperature  <- as.data.frame(tavg.decomp)
 Temperature$Date <- newdf$Date
 #merge datasets again
@@ -62,7 +57,7 @@ newdf$Price <- normalize(newdf$Price, method="range", range = c(1,10))
 
 #change days of week and month as factors
 newdf$DoW <- as.factor(newdf$DoW)
-newdf$MonthFactor <- as.factor(newdf$)
+newdf$MonthFactor <- as.factor(newdf$MonthFactor)
 
 summary(newdf)
 

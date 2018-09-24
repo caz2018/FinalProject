@@ -99,37 +99,34 @@ summary(SalesData)
 
 #forecasting based on sales data and seasonality only
 
+#When x is a msts object, K should be a vector of integers specifying the
+# number of sine and cosine (Fourier) terms for each of the seasonal periods. 
+#To find the best number of Fourier terms, it is advisable to do it by computing the lowest AICc
+#- however this code take several minutes to run, in fact, over 30 min, the code below is for the record only and it won't be run
 
-#When x is a msts object, then K should be a vector of integers specifying the
-# number of sine and cosine terms for each of the seasonal periods. 
-#To find the best number of Fourier terms by computing the lowest AICc - however this code take several minutes to run,
-#which is why it will not be used
-'''
-salesmsts = msts(timeseriesValue, start = c(2014,001), seasonal.periods=c(365.25))
-bestfit <- list(aicc=Inf)
-for(K in seq(25)) {
-  fit <- auto.arima(salesmsts, xreg=fourier(salesmsts, K=K),
-                    seasonal=FALSE)
-  if(fit[["aicc"]] < bestfit[["aicc"]]) {
-    bestfit <- fit
-    bestK <- K
-  }
-}
-fc <- forecast(bestfit,
-               xreg=fourier(salesmsts, K=bestK, h=6*365.25))
+#salesmsts = msts(timeseriesValue, start = c(2014,001), seasonal.periods=c(365.25))
+#bestfit <- list(aicc=Inf)
+#for(K in seq(25)) {
+ # fit <- auto.arima(salesmsts, xreg=fourier(salesmsts, K=K),
+  #                  seasonal=FALSE)
+  #if(fit[["aicc"]] < bestfit[["aicc"]]) {
+   # bestfit <- fit
+    #bestK <- K
+  #}
+#}
+#fc <- forecast(bestfit,
+ #              xreg=fourier(salesmsts, K=bestK, h=6*365.25))
 
-autoplot(fc)
+#autoplot(fc)
 
-fit[["aicc"]]
-'''
-
+#fit[["aicc"]]
 
 #arima fcast with week and year seasonalities, for future comparison with GAM models
 #the value of K = 19 was found by running a script for a few hours, based on the lowest AIcc
 #The code below retunrs forecasting using a dynamic regression for 90 days ahead
-salesmsts = msts(timeseriesValue, start = c(2014,001), seasonal.periods=c(7,365.25))
-fitwy <- auto.arima(salesmsts, seasonal=FALSE,
-                      xreg=fourier(salesmsts, K=c(3,19)))
+#the code below takes several minutes to run
+fitwy <- auto.arima(mstsVal, seasonal=FALSE,
+                      xreg=fourier(mstsVal, K=c(3,19)))
 fitwy %>% forecast(xreg=fourier(salesmsts, K=c(3,19), h=1*90)) %>% autoplot(include=6*336)
 
 

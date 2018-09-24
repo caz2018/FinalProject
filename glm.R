@@ -26,8 +26,9 @@ year_period <- 365.25
 #Weekly seasonality close-up - needs ordering
 data_r <- DT
 
-ggplot(data_r, aes( data_r$Freq.DoWFact , data_r$Freq.Total_Daily_Value)) +
-  geom_line() +
+
+ggplot(data_r, aes(x = n_weekdays, y=n_value )) + theme_bw() + geom_bar(stat = "identity")
+   
   theme(panel.border = element_blank(),
         panel.background = element_blank(),
         panel.grid.minor = element_line(colour = "grey90"),
