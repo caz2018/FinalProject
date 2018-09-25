@@ -13,7 +13,18 @@ WeatherData$DATE <- weatherdates
 WeatherData$PRCP[is.na(WeatherData$PRCP)] <- 0
 
 
-CurrencyData <- read.csv("CurrencyExchangeDaily.csv")
+CurrencyData <- read_delim("CurrencyExchangeDaily.csv", 
+                                     "\t", escape_double = FALSE, trim_ws = TRUE,
+                           col_types = cols(
+                             Date = col_character(),
+                             Price = col_double(),
+                             Open = col_double(),
+                             High = col_double(),
+                             Low = col_double(),
+                             `Change %` = col_character()
+                           ))
+summary(CurrencyData)
+
 currencydates <- mdy(CurrencyData$Date)
 CurrencyData$Date <- currencydates
 #trading stops on weekends, so weekends will carry the latest value after the merge of datasets
@@ -22,7 +33,7 @@ CurrencyData$Date <- currencydates
 CurrencyData$Open <- NULL
 CurrencyData$High <- NULL
 CurrencyData$Low <- NULL
-CurrencyData$Change.. <- NULL
+CurrencyData$Change <- NULL
 
 
 #merging weather and sales dataframes
@@ -44,8 +55,10 @@ tavg.ts <- ts(newdf$TAVG)
 tavg.msts <- msts.transform(tavg.ts,2014,001,yearly)
 tavg.decomp <- decomp.msts(tavg.msts)
 
-autoplot(tavg.decomp) + ylab("Daily Value") + xlab("Year")
+#for plotting the weather decomposition
+#autoplot(tavg.decomp) + ylab("Daily Value") + xlab("Year")
 
+#transforming the decomposition results into a dataframe
 Temperature  <- as.data.frame(tavg.decomp)
 Temperature$Date <- newdf$Date
 #merge datasets again
@@ -53,7 +66,7 @@ newdf <- merge(newdf, Temperature, by.x = "Date", by.y = "Date", all.x = TRUE )
 #not sure if this data should be normalised
 
 #normalise currency price
-newdf$currNorm <- normalize(newdf$Price, method="range", range = c(1,10))
+#newdf$currNorm <- normalize(newdf$Price, method="range", range = c(1,10))
 
 #change days of week and month as factors
 newdf$DoW <- as.factor(newdf$DoW)
