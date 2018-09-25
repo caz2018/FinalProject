@@ -24,7 +24,7 @@ n_price <- unique(DT[, "Freq.Price"])
 n_temp_variation <- unique(DT[, "Freq.Remainder.y"])
 week_period <- 7
 year_period <- 365.25
-#Weekly seasonality close-up - needs ordering
+#back-up
 data_r <- DT
 
 
@@ -57,12 +57,12 @@ ggplot(data_r, aes( data_r$Freq.PRCP , data_r$Freq.Total_Daily_Value)) +
 
 N <- nrow(data_r) # number of observations
 
-window <- N / week_period # number of periods in the train set
+window <- N / 365.25 # number of periods in the train set
 require(data.table)
 
 #weekday and month of the year effect
-matrix_gam <- data.table(Load = data_r[ ,"Freq.Total_Daily_Value" ],
-                         Monthly = data_r[, "Freq.MonthNum" ],
+matrix_gam <- data.table(Sales = data_r[ ,"Freq.Total_Daily_Value" ],
+                         Monthly = data_r[,"Freq.MonthNum"],
                         Weekly = data_r[,"Freq.WeekNum" ],
                         Temp = data_r[,"Freq.Remainder.y"],#may need to be tensor
                         price = data_r[,"Freq.Price" ],
@@ -70,21 +70,58 @@ matrix_gam <- data.table(Load = data_r[ ,"Freq.Total_Daily_Value" ],
                         #may need to be tensor
                         )  
 
-gam_3 <- gam(Load ~ s(Weekly, Monthly, Temp, price, trend),
+#individual gams on Day Of The Week and Month of The Year only, for visualisation of its effects
+gam_1 <- gam(Sales ~ s(Weekly, bs = "ps", k = week_period) +
+               s(Monthly, bs = "cr", k = 12),
+             
+             data = matrix_gam,
+             family = gaussian)  
+
+layout(matrix(1:2, nrow = 1))
+plot(gam_1, shade = TRUE)
+
+#gam with week and month only 
+
+gam_0 <- gam(Sales ~ s(Weekly, Monthly),
+             data = matrix_gam,
+             family = gaussian)
+summary(gam_0)
+
+#gam with monthly and trend
+
+gam_2 <- gam(Sales ~ s(Weekly, Monthly, trend ),
              data = matrix_gam,
              family = gaussian)
 
+summary(gam_2)
 
-#gam_1 <- gam(Load ~ s(Weekly, bs = "ps", k = week_period) +
- #              s(Monthly, bs = "cr", k = 12),
-  #           
-   #          data = matrix_gam,
-    #         family = gaussian)  
-
-#layout(matrix(1:2, nrow = 1))
-#plot(gam_1, shade = TRUE)
-
+#gam with all main variables
+gam_3 <- gam(Sales ~ s(Weekly, Monthly, Temp, trend),
+             data = matrix_gam,
+             family = gaussian)
 summary(gam_3)
+
+gam_4 <- gam(Sales ~ s(Weekly, Monthly, price, trend),
+             data = matrix_gam,
+             family = gaussian)
+summary(gam_4)
+
+gam_5 <- gam(Sales ~ s(Weekly, Monthly, Temp, price, trend),
+             data = matrix_gam,
+             family = gaussian)
+summary(gam_5)
+
+gam_6 <- gam(Sales ~ s(Weekly, Monthly, price),
+             data = matrix_gam,
+             family = gaussian)
+summary(gam_6)
+
+
+gam_7 <- gam(Sales ~ s(Weekly, Monthly, Temp),
+             data = matrix_gam,
+             family = gaussian)
+summary(gam_7)
+
 
 #Plotting fitted values
 df2 <- data.table(value = gam_3$fitted.values, data_time = data_r[ , "Freq.Date"] )
@@ -103,20 +140,18 @@ ggplot(data = datas, aes(data_time, value, group = type, colour = type)) +
        title = "Fit from GAM n.1")
 
 
-#with season
-gam_2 <- gam(Load ~ s(Weekly, Monthly),
-             data = matrix_gam,
-             family = gaussian)
 
 summary(gam_2)$r.sq
 summary(gam_1)$r.sq
 summary(gam_2)$s.table
 summary(gam_1)$s.table
+
+
 #Plotting fitted values
 dfs1 <- data.table(value = gam_2$fitted.values, data_time = data_r[ , "Freq.Date"] )
 dfs2 <- data.table(value = data_r$Freq.Total_Daily_Value, data_time = data_r[ , "Freq.Date"] )
-df1$type <- "Fitted"
-df2$type <- "Real"
+dfs1$type <- "Fitted"
+dfs2$type <- "Real"
 
 dataseason <- rbind(dfs1,dfs2) 
 
@@ -127,3 +162,25 @@ ggplot(data = dataseason, aes(data_time, value, group = type, colour = type)) +
   theme_bw() +
   labs(x = "Time", y = "Sales",
        title = "Fit from GAM n.1")
+
+#Plotting fitted values and fx
+ 
+dffx1 <- data.table(value = data_r$Freq.Price*100000, data_time = data_r[ , "Freq.Date"] )
+dffx2 <- data.table(value = data_r$Freq.Total_Daily_Value, data_time = data_r[ , "Freq.Date"] )
+dffx1$type <- "GBP price in USD"
+dffx2$type <- "Sales"
+
+dataseason <- rbind(dffx1,dffx2) 
+
+dataseason[, type := c(rep("GBP price in USD", nrow(data_r)), rep("Sales", nrow(data_r)))]
+
+ggplot(data = dataseason, aes(data_time, value, group = type, colour = type)) +
+  geom_line(size = 0.8) +
+  theme_bw() +
+  labs(x = "Time", y = "Sales",
+       title = "Fit from GAM n.1")
+#for the future, could add:
+#support for multiple currencies
+#support for visualization of (value of sale in currency selected)
+#prediction of values based on decomposed data + currency value by user input
+
