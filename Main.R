@@ -5,9 +5,11 @@ library(readr)
 library(stats)
 library(dplyr)
 library(reshape2)
+install.packages("lubridate")
 library(lubridate)
 library(ggplot2)
 library(forecast)
+
 library(BBmisc)
 library(zoo)
 
@@ -22,6 +24,7 @@ print(summary(SalesData))
 #y/n
 #if y then continue
 #if not then request to re-upload the file
+require(lubridate)
 date <- ymd(SalesData$Date)
 SalesData$Date <- date
 SalesData$DoW <- as.factor(weekdays.Date(date))
@@ -54,18 +57,19 @@ ts.transform <- function(univariateseries, YYYY,DDD, freq){
 
 tsVal <- ts.transform(SalesData$Total_Daily_Value, 2014,001, yearly)
 autoplot(tsVal) + ylab("Daily Value")+ xlab("Year")
+autoplot.zoo(tsVal)
 
 tsItems <- ts.transform(SalesData$Daily_Items_Sold, 2014,001, yearly)
-autoplot(tsItems) + ylab("Daily Items") + xlab("Year")
+autoplot.zoo(tsItems) + ylab("Daily Items") + xlab("Year")
 
 tsATV <- ts.transform(SalesData$Avg_Trans_Value_GBP, 2014,001, yearly)
-autoplot(tsATV) + ylab("Average Transaction Value") + xlab("Year")
+autoplot.zoo(tsATV) 
 
 tsValNorm <- ts.transform(SalesData$ValNorm,2014,001, yearly)
 autoplot(tsValNorm) + ylab("Sales Volume Normalised") + xlab("Year")
 
 #function for transforming a time series object into a msts, which is a multiple-series time series
-
+require(forecast)
 msts.transform <- function(tsobj, YYYY,DDD,s1=NULL,s2=NULL,s3=NULL){
   a = msts(tsobj, start = c(2014,001), seasonal.periods=c(s1,s2,s3))
   return(a)
@@ -80,11 +84,13 @@ decomp.msts <- function(mstsobj){
 #By default the Full Daily Sales Value will be used for ease of visualisation, with yearly only yearly and weekly pattern.
 mstsVal <- msts.transform(tsVal, 2014,001, weekly, yearly)
 decVals <- decomp.msts(mstsVal)
-autoplot(decVals) + ylab("Daily Value") + xlab("Year")
+autoplot.zoo(decVals) 
+
+
 
 
 #generating a decomposition of the normalised Daily sales values for use in the analysis in conjunction with other variables.
-salesNormmsts_mwy <- msts(timeseriesValNorm, seasonal.periods=c(7,30.5,365.25))
+salesNormmsts_mwy <- msts(tsValNorm, seasonal.periods=c(7,30.5,365.25))
 xnorm_wmy <- mstl(salesNormmsts_mwy, lambda = "auto", iterate = 3)
 autoplot(xnorm_wmy)
 summary(xnorm_wmy)
@@ -94,6 +100,7 @@ dat_decomp$Date <- date
 
 #mergin the decomposition to the original data frame
 SalesData<- merge(SalesData, dat_decomp, by.x = "Date", by.y = "Date", all.x = TRUE)
+
 summary(SalesData)
 
 
@@ -125,6 +132,8 @@ summary(SalesData)
 #the value of K = 19 was found by running a script for a few hours, based on the lowest AIcc
 #The code below retunrs forecasting using a dynamic regression for 90 days ahead
 #the code below takes several minutes to run
+
+#for predicting sales using the arima decomposition only for comparison to the gam
 fitwy <- auto.arima(mstsVal, seasonal=FALSE,
                       xreg=fourier(mstsVal, K=c(3,19)))
 fitwy %>% forecast(xreg=fourier(salesmsts, K=c(3,19), h=1*90)) %>% autoplot(include=6*336)
