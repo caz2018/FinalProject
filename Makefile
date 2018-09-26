@@ -9,10 +9,17 @@ TARGETS ?= $(addprefix src/, sales.csv gbp-usd.csv london.csv gbp-usd2.csv)
 tfile := $(shell tempfile)
 tfile1 := $(shell tempfile)
 
-all: dirs $(TARGETS) xtmp gam0
+all: dirs $(TARGETS) xtmp all.Rout
 
-gam0:
+clean::
+	$(RM) $(wildcard *.jpeg)
+
+all.Rout: gam0.R gam00.R
 	Rscript gam0.R src/sales0-M.csv sales cp
+
+all.csv: all.Rout src/gam-summary.awk
+	awk -f src/gam-summary.awk all.Rout
+
 
 xtmp:
 	$(RM) $(tfile) $(tfile1)
