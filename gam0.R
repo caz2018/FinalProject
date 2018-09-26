@@ -198,26 +198,30 @@ for (ftres in ftres2) {
     summary(gam0)$r.sq
 }
 
-## Ad-hoc: using a tensor 
+## Ad-hoc: using a tensor
 
-ftres <- c("mm0", "growth", "fx1", "weather")
+for (sp0 in c("cp", "cc", "ps")) {
 
-fmla <- "value ~ te(growth, fx1) + s(mm0, bs = \"ps\") "
-tag <- paste("te:", fmla)
+    ftres <- c("mm0", "growth", "fx1", "weather")
 
-gam0 <- gam(as.formula(fmla),
-            weights = wts,
-            data = data1,
-            family = family0)
+    fmla <- sprintf("value ~ te(growth, fx1) + s(mm0, bs = \"%s\") ", sp0)
+    tag <- paste("te:", fmla)
 
-gam0[["name0"]] <- tag
-gam0[["ftres"]] <- unique(ftres)
-gs[[tag]] <- gam0
+    gam0 <- gam(as.formula(fmla),
+                weights = wts,
+                data = data1,
+                family = family0)
 
-ltp.gamS(gam0, force0=force0)       # just to start with
-force0 <- FALSE
+    gam0[["name0"]] <- tag
+    gam0[["ftres"]] <- unique(ftres)
+    gs[[tag]] <- gam0
 
-summary(gam0)$r.sq
+    ltp.gamS(gam0, force0=force0)       # just to start with
+    force0 <- FALSE
+
+    summary(gam0)$r.sq
+}
+
 
 x.plots[['final']] <- ltp.chart(gam0, tbl=data1)
 
@@ -226,7 +230,7 @@ x.plots[['final']] <- ltp.chart(gam0, tbl=data1)
 jpeg(filename=paste("gam0", "-%03d.jpeg", sep=""), 
      width=1024, height=768)
 
-plot(gam0)
+x0 <- lapply(gs, plot)
 
 scatter.smooth(x=1:length(d1), y=d1)    # see a scatter
 

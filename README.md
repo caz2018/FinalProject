@@ -14,11 +14,19 @@ The source files are in bak/. These are converted and put into src/ by the Makef
 
 ## Python processing
 
-There is a suite of Python modules that process the downloads to produce a single CSV file.
+There is a suite of Python modules that process the downloads to produce a
+single CSV file.
 
 It produces the single CSV file sales0-M.csv.
 
 ## R analysis
 
-The seasonal analysis is carried out with R using the CSV file.
+### decompose0.R
+
+A monthly seasonal analysis is carried out with R using the CSV file.
+
+### gam0.R
+
+Demonstrates how to use a Generalized Additive Model for the sales data.
+
 
