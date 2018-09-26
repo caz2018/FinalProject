@@ -9,7 +9,10 @@ TARGETS ?= $(addprefix src/, sales.csv gbp-usd.csv london.csv gbp-usd2.csv)
 tfile := $(shell tempfile)
 tfile1 := $(shell tempfile)
 
-all: dirs $(TARGETS) xtmp
+all: dirs $(TARGETS) xtmp gam0
+
+gam0:
+	Rscript gam0.R src/sales0-M.csv sales cp
 
 xtmp:
 	$(RM) $(tfile) $(tfile1)
