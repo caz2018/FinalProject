@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 #clean up env
 rm(list = ls())
 
@@ -5,25 +7,18 @@ library(readr)
 library(stats)
 library(dplyr)
 library(reshape2)
-install.packages("lubridate")
 library(lubridate)
 library(ggplot2)
 library(forecast)
-
 library(BBmisc)
 library(zoo)
 
 
-
 #read data from csv and loading sales data with dates and formatting the date field as date in R
 #Note: file must be a csv and the date order must be oldest to newest in the file.
-
 SalesData <-  as.data.frame(read_csv("SalesReportDaily.csv"))
 print(summary(SalesData))
-#ask - do those values seem correct? Ensure minimum is the oldest date and that the format matches the example 2014-01-01
-#y/n
-#if y then continue
-#if not then request to re-upload the file
+
 require(lubridate)
 date <- ymd(SalesData$Date)
 SalesData$Date <- date
@@ -81,12 +76,10 @@ decomp.msts <- function(mstsobj){
   return(xy1)
 }
 
-#By default the Full Daily Sales Value will be used for ease of visualisation, with yearly only yearly and weekly pattern.
+#By default the Full Daily Sales Value will be used for ease of visualisation, with yearly and weekly pattern.
 mstsVal <- msts.transform(tsVal, 2014,001, weekly, yearly)
 decVals <- decomp.msts(mstsVal)
 autoplot.zoo(decVals) 
-
-
 
 
 #generating a decomposition of the normalised Daily sales values for use in the analysis in conjunction with other variables.
@@ -100,9 +93,6 @@ dat_decomp$Date <- date
 
 #mergin the decomposition to the original data frame
 SalesData<- merge(SalesData, dat_decomp, by.x = "Date", by.y = "Date", all.x = TRUE)
-
-summary(SalesData)
-
 
 #forecasting based on sales data and seasonality only
 
@@ -134,8 +124,8 @@ summary(SalesData)
 #the code below takes several minutes to run
 
 #for predicting sales using the arima decomposition only for comparison to the gam
-fitwy <- auto.arima(mstsVal, seasonal=FALSE,
+'fitwy <- auto.arima(mstsVal, seasonal=FALSE,
                       xreg=fourier(mstsVal, K=c(3,19)))
 fitwy %>% forecast(xreg=fourier(salesmsts, K=c(3,19), h=1*90)) %>% autoplot(include=6*336)
 
-
+' 

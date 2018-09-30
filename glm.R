@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 library(feather)
 library(data.table)
 library(mgcv)
@@ -43,8 +45,8 @@ ggplot(data_r, aes( data_r$Freq.Price , data_r$Freq.Total_Daily_Value)) +
 
 #Precipitation close-up - needs ordering
 
-ggplot(data_r, aes( data_r$Freq.PRCP , data_r$Freq.Total_Daily_Value)) +
-  geom_line() +
+'ggplot(data_r, aes( data_r$Freq.PRCP , data_r$Freq.Total_Daily_Value)) +
+  geom_bar() +
   theme(panel.border = element_blank(),
         panel.background = element_blank(),
         panel.grid.minor = element_line(colour = "grey90"),
@@ -53,7 +55,7 @@ ggplot(data_r, aes( data_r$Freq.PRCP , data_r$Freq.Total_Daily_Value)) +
         axis.text = element_text(size = 8),
         axis.title = element_text(size = 8, face = "bold")) +
   labs(x = "Rainfall", y = "Avg Daily Sales GBP")
-
+' 
 
 N <- nrow(data_r) # number of observations
 
@@ -64,10 +66,10 @@ require(data.table)
 matrix_gam <- data.table(Sales = data_r[ ,"Freq.Total_Daily_Value" ],
                          Monthly = data_r[,"Freq.MonthNum"],
                         Weekly = data_r[,"Freq.WeekNum" ],
-                        Temp = data_r[,"Freq.Remainder.y"],#may need to be tensor
+                        Temp = data_r[,"Freq.Remainder.y"],
                         price = data_r[,"Freq.Price" ],
                         trend = data_r[,"Freq.Trend.x"]
-                        #may need to be tensor
+                       
                         )  
 
 #individual gams on Day Of The Week and Month of The Year only, for visualisation of its effects
@@ -80,12 +82,21 @@ gam_1 <- gam(Sales ~ s(Weekly, bs = "ps", k = week_period) +
 layout(matrix(1:2, nrow = 1))
 plot(gam_1, shade = TRUE)
 
-#gam with week and month only 
+#function for displaying results
+
+x <- function(a){
+  return(summary(a)$r.sq)
+}
+ 
+
+
+#gam with week and month only
 
 gam_0 <- gam(Sales ~ s(Weekly, Monthly),
              data = matrix_gam,
              family = gaussian)
-summary(gam_0)
+
+
 
 #gam with monthly and trend
 
@@ -93,35 +104,34 @@ gam_2 <- gam(Sales ~ s(Weekly, Monthly, trend ),
              data = matrix_gam,
              family = gaussian)
 
-summary(gam_2)
+display.results(gam_2)
 
 #gam with all main variables
 gam_3 <- gam(Sales ~ s(Weekly, Monthly, Temp, trend),
              data = matrix_gam,
              family = gaussian)
-summary(gam_3)
+display.results(gam_3)
 
 gam_4 <- gam(Sales ~ s(Weekly, Monthly, price, trend),
              data = matrix_gam,
              family = gaussian)
-summary(gam_4)
+display.results(gam_4)
 
 gam_5 <- gam(Sales ~ s(Weekly, Monthly, Temp, price, trend),
              data = matrix_gam,
              family = gaussian)
-summary(gam_5)
+display.results(gam_5)
 
 gam_6 <- gam(Sales ~ s(Weekly, Monthly, price),
              data = matrix_gam,
              family = gaussian)
-summary(gam_6)
+display.results(gam_6)
 
 
 gam_7 <- gam(Sales ~ s(Weekly, Monthly, Temp),
              data = matrix_gam,
              family = gaussian)
-summary(gam_7)
-
+display.results(gam_7)
 
 #Plotting fitted values
 df2 <- data.table(value = gam_3$fitted.values, data_time = data_r[ , "Freq.Date"] )

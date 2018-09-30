@@ -20,11 +20,6 @@ ltp <- list()
 
 ## The weights to use within GAM.
 
-## Convert year and month to a date - BoM
-data0 <- read.csv(x.args[1], stringsAsFactors=FALSE)
-x.dt0 <- data0[["dt0"]] #date
-x.dt0 <- sapply(x.dt0, function(x) paste(x, "-01", sep=""))
-data0[["dt1"]] <- as.Date(x.dt0, format="%Y-%m-%d")
 
 ### Flat weighting 
 wts.flat <- rep(1, dim(data0)[1])
@@ -36,17 +31,6 @@ wts.expmean <- wts.exp / mean(wts.exp)
 ### Set a default
 wts <- wts.flat
 
-## Make the date an EoM
-require("lubridate")
-data0[["dt1"]] <- data0[["dt1"]] + months(1) - days(1)
-### add the number of the month
-data0[["mm0"]] <- month(data0[["dt1"]])
-
-
-## Add a log of sales
-data0[["sales0"]] <- log(data0[["sales"]])
-d0 <- data0[["sales0"]]
-d1 <- d0 - min(d0)
 
 ### Try and remove the growth
 ### this includes some FX

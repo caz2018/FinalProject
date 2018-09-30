@@ -1,0 +1,443 @@
+---
+title: "WeatherCurrencyAndSales"
+author: "Caroline Silvestre"
+date: "30/09/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r uploading sales dataset}
+library(readr)
+library(stats)
+library(dplyr)
+library(reshape2)
+library(lubridate)
+library(ggplot2)
+library(forecast)
+library(BBmisc)
+library(zoo)
+
+
+#read data from csv and loading sales data with dates and formatting the date field as date in R
+#Note: file must be a csv and the date order must be oldest to newest in the file.
+SalesData <-  as.data.frame(read_csv("SalesReportDaily.csv"))
+```
+
+```{r summary, echo=FALSE}
+print(summary(SalesData))
+```
+
+```{r manipulating variables before analysis}
+
+require(lubridate)
+date <- ymd(SalesData$Date)
+SalesData$Date <- date
+SalesData$DoW <- as.factor(weekdays.Date(date))
+SalesData$WeekNum <- recode(SalesData$DoW,'Monday'=1,'Tuesday'=2, 'Wednesday'=3,'Thursday'=4,
+                                        'Friday'=5,'Saturday'=6,'Sunday'=7)
+### add the number of the month
+require("lubridate")
+SalesData$MonthNum <- month(SalesData$Date)
+SalesData$MonthFactor <- as.factor(recode(SalesData$MonthNum, '1'="Jan", '2'= "Feb", '3'= "Mar", '4'= "Apr", '5'= "May", '6'= "Jun", '7'="Jul",'8' = "Aug", '9'= "Sep", '10' = "Oct", '11'= "Nov", '12' = "Dec"))
+
+#setting the seasonality variables
+weekly <- 7
+monthly <- 30.5
+yearly <- 364.25
+
+#adding a normalized version of daily sales values to the dataframe, using a 1 to 10 range to avoid zero values
+SalesData$ValNorm <- normalize(SalesData$Total_Daily_Value , method="range", range=c(1,10))
+
+#need to transform sales data into ts (time series) objects and then into a msts (multi-seasonal time-series). The default is daily.
+#function to transform a vector into a time series object. Need the day of the year as a number from 1 to 365/366.
+#freq is the data interval, for daily data use yearly.
+
+ts.transform <- function(univariateseries, YYYY,DDD, freq){
+  x = ts(univariateseries, start = c(YYYY,DDD) , frequency = freq)
+  return(x)
+}
+
+tsVal <- ts.transform(SalesData$Total_Daily_Value, 2014,001, yearly)
+```
+```{r timeseries, echo=FALSE}
+autoplot(tsVal) + ylab("Daily Value")+ xlab("Year")
+```
+
+```{r time series}
+#time series for all variables were created, but they were not used this time
+tsItems <- ts.transform(SalesData$Daily_Items_Sold, 2014,001, yearly)
+#autoplot.zoo(tsItems) + ylab("Daily Items") + xlab("Year")
+
+tsATV <- ts.transform(SalesData$Avg_Trans_Value_GBP, 2014,001, yearly)
+#autoplot.zoo(tsATV) + ylab("Daily Items") + xlab("Year")
+
+tsValNorm <- ts.transform(SalesData$ValNorm,2014,001, yearly)
+#autoplot(tsValNorm) + ylab("Sales Volume Normalised") + xlab("Year")
+
+#function for transforming a time series object into a msts, which is a multiple-series time series
+require(forecast)
+msts.transform <- function(tsobj, YYYY,DDD,s1=NULL,s2=NULL,s3=NULL){
+  a = msts(tsobj, start = c(2014,001), seasonal.periods=c(s1,s2,s3))
+  return(a)
+}
+
+#function to decompose both single-seasonal and multi-seasonal time-series
+decomp.msts <- function(mstsobj){
+  xy1 = mstl(mstsobj, iterate = 3)
+  return(xy1)
+}
+
+#By default the Full Daily Sales Value will be used for ease of visualisation, with yearly and weekly pattern.
+mstsVal <- msts.transform(tsVal, 2014,001, weekly, yearly)
+decVals <- decomp.msts(mstsVal)
+```
+```{r Decomposed Values for the sales time series, echo=FALSE}
+autoplot.zoo(decVals) 
+```
+
+```{r}
+#generating a decomposition of the normalised Daily sales values for use in the analysis in conjunction with other variables.
+salesNormmsts_mwy <- msts(tsValNorm, seasonal.periods=c(7,30.5,365.25))
+xnorm_wmy <- mstl(salesNormmsts_mwy, lambda = "auto", iterate = 3)
+autoplot(xnorm_wmy)
+
+#generating a dataset with decomposed values to use with GAM
+dat_decomp <- as.data.frame(xnorm_wmy)
+dat_decomp$Date <- date
+
+#mergin the decomposition to the original data frame
+SalesData<- merge(SalesData, dat_decomp, by.x = "Date", by.y = "Date", all.x = TRUE)
+```
+Notes on forecasting based on sales data and seasonality only
+
+When x is a msts object, K should be a vector of integers specifying the
+number of sine and cosine (Fourier) terms for each of the seasonal periods. 
+To find the best number of Fourier terms, it is advisable to do it by computing the lowest AICc
+However this code take several minutes to run, in fact, over 30 min, the code below is for the record only and it won't be run
+```{r}
+#salesmsts = msts(timeseriesValue, start = c(2014,001), seasonal.periods=c(365.25))
+#bestfit <- list(aicc=Inf)
+#for(K in seq(25)) {
+ # fit <- auto.arima(salesmsts, xreg=fourier(salesmsts, K=K),
+  #                  seasonal=FALSE)
+  #if(fit[["aicc"]] < bestfit[["aicc"]]) {
+   # bestfit <- fit
+    #bestK <- K
+  #}
+#}
+#fc <- forecast(bestfit,
+ #              xreg=fourier(salesmsts, K=bestK, h=6*365.25))
+
+#autoplot(fc)
+
+#fit[["aicc"]]
+
+#arima fcast with week and year seasonalities, for future comparison with GAM models
+#the value of K = 19 was found by running a script for a few hours, based on the lowest AIcc
+#The code below retunrs forecasting using a dynamic regression for 90 days ahead
+#the code below takes several minutes to run
+
+#for predicting sales using the arima decomposition only for comparison to the gam
+'fitwy <- auto.arima(mstsVal, seasonal=FALSE,
+                      xreg=fourier(mstsVal, K=c(3,19)))
+fitwy %>% forecast(xreg=fourier(salesmsts, K=c(3,19), h=1*90)) %>% autoplot(include=6*336)'
+```
+
+Joining historical values for the equivalent dates from both weather observations and currency exchange
+
+```{r}
+
+WeatherData <- read_csv("WeatherDaily.csv")
+weatherdates <- as.Date(WeatherData$DATE, "%d/%m/%Y")
+#View(weatherdates)
+WeatherData$DATE <- weatherdates
+#remove NA's
+WeatherData$PRCP[is.na(WeatherData$PRCP)] <- 0
+
+#uploading currency data
+CurrencyData <- CurrencyExchangeDaily <- read_csv("CurrencyExchangeDaily.csv")
+currencydates <- mdy(CurrencyData$Date)
+CurrencyData$Date <- currencydates
+#trading stops on weekends, so weekends will carry the latest value after the merge of datasets
+
+#removing data we don't need
+CurrencyData$Open <- NULL
+CurrencyData$High <- NULL
+CurrencyData$Low <- NULL
+CurrencyData$Change <- NULL
+
+
+#merging weather and sales dataframes
+newdf <- merge(SalesData, WeatherData, by.x = "Date", by.y = "DATE", all.x = TRUE)
+summary(newdf)
+#adding currency data
+newdf <- merge(newdf, CurrencyData, by.x = "Date", by.y = "Date", all.x = TRUE)
+summary(newdf)
+#replacing NA's in currency data with the last value 
+newdf$Price <- na.locf(newdf$Price)
+
+#transforming precipitation into factors - 'rain' and 'dry'
+newdf$PRCP[newdf$PRCP > 0] <- 1
+newdf$PRCP <- as.factor(newdf$PRCP)
+
+
+#running a seasonal decomposition on weather as it is a highly seasonal feature
+tavg.ts <- ts(newdf$TAVG)
+tavg.msts <- msts.transform(tavg.ts,2014,001,yearly)
+tavg.decomp <- decomp.msts(tavg.msts)
+```
+
+```{r weather seasonal decomposition, echo= FALSE}
+#for plotting the weather decomposition
+autoplot(tavg.decomp) + ylab("Daily Value") + xlab("Year")
+```
+Because weather is seasonal as well as sales, decomposing the seasonality from the weather and using the remainder element of decomposition seemed like a way of retrieving 'unusually' cold or hot days and using them in the analysis instead.
+
+```{r}
+Temperature  <- as.data.frame(tavg.decomp)
+Temperature$Date <- newdf$Date
+#merge datasets again
+newdf <- merge(newdf, Temperature, by.x = "Date", by.y = "Date", all.x = TRUE )
+
+#change days of week and month as factors
+newdf$DoW <- as.factor(newdf$DoW)
+newdf$MonthFactor <- as.factor(newdf$MonthFactor)
+```
+The merging of all data that has been extracted, manipulated or kept as original, has resulted in a large dataset. From those resulting variables, different models will be tested for accuracy of forecast.
+```{r}
+summary(newdf)
+```
+The GLM models
+```{r}
+#reading dataframe as data.table
+DT <- as.data.frame.table(newdf)
+summary(DT)
+
+#Setting variables
+
+n_value <- unique(DT[, "Freq.Total_Daily_Value"])
+n_date <- unique(DT[, "Freq.Date"])
+n_weekdays <- unique(DT[, "Freq.WeekNum"])
+n_dow <- unique(DT[, "Freq.DoW"])
+n_monthFact <- unique(DT[, "Freq.MonthFactor" ])
+n_monthn <- unique(DT[, "Freq.MonthNum" ])
+n_temp <- unique(DT[, "Freq.TAVG"])
+n_rain <- unique(DT[, "Freq.PRCP"])
+n_price <- unique(DT[, "Freq.Price"])
+n_temp_variation <- unique(DT[, "Freq.Remainder.y"])
+week_period <- 7
+year_period <- 365.25
+#back-up
+data_r <- DT
+```
+
+```{r}
+#Currency close-up - needs ordering
+
+ggplot(data_r, aes( data_r$Freq.Price , data_r$Freq.Total_Daily_Value)) +
+  geom_line() +
+  theme(panel.border = element_blank(),
+        panel.background = element_blank(),
+        panel.grid.minor = element_line(colour = "grey90"),
+        panel.grid.major = element_line(colour = "grey90"),
+        panel.grid.major.x = element_line(colour = "grey90"),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8, face = "bold")) +
+  labs(x = "Currency", y = "Avg Daily Sales GBP")
+
+```
+
+```{r}
+#Precipitation close-up - needs ordering
+
+'ggplot(data_r, aes( data_r$Freq.PRCP , data_r$Freq.Total_Daily_Value)) +
+  geom_bar() +
+  theme(panel.border = element_blank(),
+        panel.background = element_blank(),
+        panel.grid.minor = element_line(colour = "grey90"),
+        panel.grid.major = element_line(colour = "grey90"),
+        panel.grid.major.x = element_line(colour = "grey90"),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8, face = "bold")) +
+  labs(x = "Rainfall", y = "Avg Daily Sales GBP")
+' 
+
+N <- nrow(data_r) # number of observations
+
+window <- N / 365.25 # number of periods in the train set
+require(data.table)
+
+#weekday and month of the year effect
+matrix_gam <- data.table(Sales = data_r[ ,"Freq.Total_Daily_Value" ],
+                         Monthly = data_r[,"Freq.MonthNum"],
+                        Weekly = data_r[,"Freq.WeekNum" ],
+                        Temp = data_r[,"Freq.Remainder.y"],
+                        price = data_r[,"Freq.Price" ],
+                        trend = data_r[,"Freq.Trend.x"]
+                       
+                        )  
+
+#individual gams on Day Of The Week and Month of The Year only, for visualisation of its effects
+gam_1 <- gam(Sales ~ s(Weekly, bs = "ps", k = week_period) +
+               s(Monthly, bs = "cr", k = 12),
+             
+             data = matrix_gam,
+             family = gaussian)  
+
+layout(matrix(1:2, nrow = 1))
+plot(gam_1, shade = TRUE)
+
+
+#gam with week and month only
+
+gam_0 <- gam(Sales ~ s(Weekly, Monthly),
+             data = matrix_gam,
+             family = gaussian)
+
+#gam with monthly and trend
+
+gam_2 <- gam(Sales ~ s(Weekly, Monthly, trend ),
+             data = matrix_gam,
+             family = gaussian)
+
+#gam with all main variables
+gam_3 <- gam(Sales ~ s(Weekly, Monthly, Temp, trend),
+             data = matrix_gam,
+             family = gaussian)
+
+gam_4 <- gam(Sales ~ s(Weekly, Monthly, price, trend),
+             data = matrix_gam,
+             family = gaussian)
+
+gam_5 <- gam(Sales ~ s(Weekly, Monthly, Temp, price, trend),
+             data = matrix_gam,
+             family = gaussian)
+
+gam_6 <- gam(Sales ~ s(Weekly, Monthly, price),
+             data = matrix_gam,
+             family = gaussian)
+
+gam_7 <- gam(Sales ~ s(Weekly, Monthly, Temp),
+             data = matrix_gam,
+             family = gaussian)
+
+```
+
+```{r, echo=FALSE}
+
+#Plotting fitted values
+df2 <- data.table(value = gam_3$fitted.values, data_time = data_r[ , "Freq.Date"] )
+df1 <- data.table(value = data_r$Freq.Total_Daily_Value, data_time = data_r[ , "Freq.Date"] )
+df2$type <- "Real"
+df1$type <- "pred"
+
+datas <- rbind(df1,df2)
+  
+datas[, type := c(rep("Real", nrow(data_r)), rep("pred", nrow(data_r)))]
+
+ggplot(data = datas, aes(data_time, value, group = type, colour = type)) +
+  geom_line(size = 0.7) +
+  theme_bw() +
+  labs(x = "Time", y = "Sales",
+       title = "Fit from GAM n.1")
+```
+
+```{r}
+
+summary(gam_0)$s.table
+cat("GAM 0 R-sq:", summary(gam_0)$r.sq,"\n")
+
+summary(gam_1)$s.table
+cat("GAM 1 R-sq:", summary(gam_1)$r.sq,"\n")
+
+summary(gam_2)$s.table
+cat("GAM 2 R-sq:", summary(gam_2)$r.sq,"\n")
+
+summary(gam_3)$s.table
+cat("GAMA 3 R-sq:", summary(gam_3)$r.sq,"\n")
+
+summary(gam_4)$s.table
+cat("GAM 4 R-sq:", summary(gam_4)$r.sq,"\n")
+
+summary(gam_5)$s.table
+cat("GAM 5 R-sq:", summary(gam_5)$r.sq,"\n")
+
+
+summary(gam_6)$s.table
+cat("GAM 6 R-sq:", summary(gam_6)$r.sq,"\n")
+
+
+summary(gam_7)$s.table
+cat("GAM 7 R-sq:", summary(gam_7)$r.sq)
+
+```
+
+```{r, echo=FALSE}
+
+#Plotting fitted values
+dfs1 <- data.table(value = gam_5$fitted.values, data_time = data_r[ , "Freq.Date"] )
+dfs2 <- data.table(value = data_r$Freq.Total_Daily_Value, data_time = data_r[ , "Freq.Date"] )
+dfs1$type <- "Fitted"
+dfs2$type <- "Real"
+
+dataseason <- rbind(dfs1,dfs2) 
+
+dataseason[, type := c(rep("Fitted", nrow(data_r)), rep("Real", nrow(data_r)))]
+
+ggplot(data = dataseason, aes(data_time, value, group = type, colour = type)) +
+  geom_line(size = 0.8) +
+  theme_bw() +
+  labs(x = "Time", y = "Sales",
+       title = "Fit from GAM n.5")
+```
+
+#Plotting sales values and fx
+
+```{r, echo= FALSE} 
+dffx1 <- data.table(value = data_r$Freq.Price*100000, data_time = data_r[ , "Freq.Date"] )
+dffx2 <- data.table(value = data_r$Freq.Total_Daily_Value, data_time = data_r[ , "Freq.Date"] )
+dffx1$type <- "GBP price in USD"
+dffx2$type <- "Sales"
+
+dataseason <- rbind(dffx1,dffx2) 
+
+dataseason[, type := c(rep("GBP price in USD", nrow(data_r)), rep("Sales", nrow(data_r)))]
+
+ggplot(data = dataseason, aes(data_time, value, group = type, colour = type)) +
+  geom_line(size = 0.8) +
+  theme_bw() +
+  labs(x = "Time", y = "Sales",
+       title = "Sales vs USD to GBP")
+```
+#Plotting sales values and weather
+
+```{r, echo= FALSE} 
+dffx1 <- data.table(value = data_r$Freq.Remainder.y, data_time = data_r[ , "Freq.Date"] )
+dffx2 <- data.table(value = data_r$Freq.ValNorm , data_time = data_r[ , "Freq.Date"] )
+dffx1$type <- "temperature"
+dffx2$type <- "Sales"
+
+dataseason <- rbind(dffx1,dffx2) 
+
+dataseason[, type := c(rep("weather", nrow(data_r)), rep("Sales", nrow(data_r)))]
+
+ggplot(data = dataseason, aes(data_time, value, group = type, colour = type)) +
+  geom_line(size = 0.3) +
+  theme_bw() +
+  labs(x = "Time", y = "Sales",
+       title = "Fit from weather noise to normalised values")
+```
+
+
+#for the future, could add:
+#support for multiple currencies
+#support for visualization of (value of sale in currency selected)
+#prediction of values based on decomposed data + currency value by user input
+
+
+
+

@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 library(stats)
 library(readr)
 library(lubridate)
@@ -13,16 +15,7 @@ WeatherData$DATE <- weatherdates
 WeatherData$PRCP[is.na(WeatherData$PRCP)] <- 0
 
 
-CurrencyData <- read_delim("CurrencyExchangeDaily.csv", 
-                                     "\t", escape_double = FALSE, trim_ws = TRUE,
-                           col_types = cols(
-                             Date = col_character(),
-                             Price = col_double(),
-                             Open = col_double(),
-                             High = col_double(),
-                             Low = col_double(),
-                             `Change %` = col_character()
-                           ))
+CurrencyData <- CurrencyExchangeDaily <- read_csv("CurrencyExchangeDaily.csv")
 summary(CurrencyData)
 
 currencydates <- mdy(CurrencyData$Date)
