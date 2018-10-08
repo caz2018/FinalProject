@@ -36,7 +36,33 @@ data2 <- ts(data1$value,
             end=c(data1$yr0[nrow(data1)], data1$month0[nrow(data1)]), 
             frequency=12)
 
+## Get the noise from the decomposition and test if it is normal
+
 sales0 <- decompose(data2)
+
+x0 <- as.vector(sales0$random)
+x0 <- x0[!is.na(x0)]
+
+## Checking
+summary(x0)
+sd(x0)
+
+hist(x0)
+
+## Useful function
+
+p2o <- function(p) (1-p)/p              # Convert probabililty to odds
+
+## We can remove a rogue value if we want.
+n <- 0
+x1 <- sort(x0)[1:length(x0)-n]
+
+## Use a Kolmogorov test using pnarm (normal percentiles)
+ks0 <- ks.test(x1, "pnorm", mean(x1), sd(x1), alternative=c("two.sided"))
+
+p2o(ks0[["p.value"]])
+
+
 
 jpeg(filename=paste("decompose", "-%03d.jpeg", sep=""), 
      width=1024, height=768)
@@ -45,6 +71,8 @@ print(p0)
 
 plot(sales0)
 title("Sales")
+
+qqnorm(x0); qqline(x0, col=2)
 
 x0 <- lapply(dev.list(), function(x) dev.off(x))
 
